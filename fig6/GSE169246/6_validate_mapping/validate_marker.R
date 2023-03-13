@@ -1,0 +1,132 @@
+#--------------------------------------------------------------
+# filename : validate.R
+# Date : 2022-08-31
+# contributor : Yanshuo Chu
+# function: validate
+#--------------------------------------------------------------
+
+print('<==== validate.R ====>')
+
+rm(list=ls())
+
+library(Seurat)
+library(tidyverse)
+library(ggplot2)
+library(cowplot)
+library(ggpubr)
+
+figurePath <- file.path("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/result/GSE169246/6_validate_mapping/outs")
+if(!dir.exists(figurePath)){
+    dir.create(figurePath, recursive = T)
+}
+setwd(figurePath)
+
+CD4Obj <- readRDS("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/result/GSE169246/TCells/forMapping/CD4.rds")
+CD8Obj <- readRDS("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/result/GSE169246/TCells/forMapping/CD8.rds")
+
+TotalAntiPDL1ChemoPatients <- c("P019",
+                                "P010",
+                                "P012",
+                                "P007",
+                                "P017",
+                                "P001",
+                                "P002",
+                                "P014",
+                                "P004",
+                                "P005",
+                                "P016")
+
+TotalChemoPatients <- c("P022",
+                        "P011",
+                        "P020",
+                        "P008",
+                        "P013",
+                        "P025",
+                        "P018",
+                        "P023",
+                        "P024",
+                        "P003",
+                        "P028")
+
+AllResponsePatients <- c("P019",
+                         "P010",
+                         "P012",
+                         "P007",
+                         "P022",
+                         "P011",
+                         "P020",
+                         "P008",
+                         "P013")
+
+CD8_meta <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/result/GSE169246/MappingResult_filter/CD8/meta_2022-05-25.tsv")
+CD8_meta$Sample <- stringr::str_extract(CD8_meta$ID, "(?<=^.{10,20}\\.).+")
+CD8_meta$Patient <- stringr::str_extract(CD8_meta$Sample, "P\\d+")
+CD8_meta$Tissue <- stringr::str_extract(CD8_meta$Sample, "\\w$")
+CD8_meta$TumorTreatment <- stringr::str_extract(CD8_meta$Sample, "^[a-zA-Z]+")
+CD8_meta$isResponse <- "NR"
+CD8_meta$isResponse[CD8_meta$Patient %in% AllResponsePatients] <- "R"
+CD8_meta$isResponse[CD8_meta$Patient == "P028"] <- "-"
+CD8_meta$TreatmentType <- "PDL1+Chemo"
+CD8_meta$TreatmentType[CD8_meta$Patient %in% TotalChemoPatients] <- "Chemo"
+CD8_meta$group <- paste0(CD8_meta$TreatmentType, "-", CD8_meta$TumorTreatment, "-", CD8_meta$isResponse)
+
+CD8Obj@meta.data$Sample <- stringr::str_extract(Cells(CD8Obj), "(?<=^.{10,20}\\.).+")
+CD8Obj@meta.data$Patient <- stringr::str_extract(CD8Obj@meta.data$Sample, "P\\d+")
+CD8Obj@meta.data$Tissue <- stringr::str_extract(CD8Obj@meta.data$Sample, "\\w$")
+CD8Obj@meta.data$TumorTreatment <- stringr::str_extract(CD8Obj@meta.data$Sample, "^[a-zA-Z]+")
+CD8Obj@meta.data$isResponse <- "NR"
+CD8Obj@meta.data$isResponse[CD8Obj@meta.data$Patient %in% AllResponsePatients] <- "R"
+CD8Obj@meta.data$isResponse[CD8Obj@meta.data$Patient == "P028"] <- "-"
+CD8Obj@meta.data$TreatmentType <- "PDL1+Chemo"
+CD8Obj@meta.data$TreatmentType[CD8Obj@meta.data$Patient %in% TotalChemoPatients] <- "Chemo"
+CD8Obj@meta.data$group <- paste0(CD8Obj@meta.data$TreatmentType, "-", CD8Obj@meta.data$TumorTreatment, "-", CD8Obj@meta.data$isResponse)
+CD8Obj@meta.data$predicted.celltype <- CD8_meta$predicted.celltype[match(Cells(CD8Obj), CD8_meta$ID)]
+
+CD4_meta <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/result/GSE169246/MappingResult_filter/CD4/meta_2022-05-25.tsv")
+CD4_meta$Sample <- stringr::str_extract(CD4_meta$ID, "(?<=^.{10,20}\\.).+")
+CD4_meta$Patient <- stringr::str_extract(CD4_meta$Sample, "P\\d+")
+CD4_meta$Tissue <- stringr::str_extract(CD4_meta$Sample, "\\w$")
+CD4_meta$TumorTreatment <- stringr::str_extract(CD4_meta$Sample, "^[a-zA-Z]+")
+CD4_meta$isResponse <- "NR"
+CD4_meta$isResponse[CD4_meta$Patient %in% AllResponsePatients] <- "R"
+CD4_meta$isResponse[CD4_meta$Patient == "P028"] <- "-"
+CD4_meta$TreatmentType <- "PDL1+Chemo"
+CD4_meta$TreatmentType[CD4_meta$Patient %in% TotalChemoPatients] <- "Chemo"
+CD4_meta$group <- paste0(CD4_meta$TreatmentType, "-", CD4_meta$TumorTreatment, "-", CD4_meta$isResponse)
+
+CD4Obj@meta.data$Sample <- stringr::str_extract(Cells(CD4Obj), "(?<=^.{10,20}\\.).+")
+CD4Obj@meta.data$Patient <- stringr::str_extract(CD4Obj@meta.data$Sample, "P\\d+")
+CD4Obj@meta.data$Tissue <- stringr::str_extract(CD4Obj@meta.data$Sample, "\\w$")
+CD4Obj@meta.data$TumorTreatment <- stringr::str_extract(CD4Obj@meta.data$Sample, "^[a-zA-Z]+")
+CD4Obj@meta.data$isResponse <- "NR"
+CD4Obj@meta.data$isResponse[CD4Obj@meta.data$Patient %in% AllResponsePatients] <- "R"
+CD4Obj@meta.data$isResponse[CD4Obj@meta.data$Patient == "P028"] <- "-"
+CD4Obj@meta.data$TreatmentType <- "PDL1+Chemo"
+CD4Obj@meta.data$TreatmentType[CD4Obj@meta.data$Patient %in% TotalChemoPatients] <- "Chemo"
+CD4Obj@meta.data$group <- paste0(CD4Obj@meta.data$TreatmentType, "-", CD4Obj@meta.data$TumorTreatment, "-", CD4Obj@meta.data$isResponse)
+CD4Obj@meta.data$predicted.celltype <- CD4_meta$predicted.celltype[match(Cells(CD4Obj), CD4_meta$ID)]
+
+allMD <- list(CD8 = CD8_meta, CD4 = CD4_meta)
+allObj <- list(CD8 = CD8Obj, CD4 = CD4Obj)
+
+allT <- bind_rows(CD4_meta, CD8_meta)
+allTSampleCN <- allT %>%
+    group_by(Patient, Sample) %>%
+    count
+
+targetTreatments = c("Pre", "Post")
+targetCellSet = c("AllT", "Split")
+targetTreatmentType = c("PDL1+Chemo", "Chemo")
+
+HSMarkers <- c("HSPA6", "HSPA1A", "HSPA1B", "DNAJB1", "HSPH1", "HSP90AA1",
+               "HSPE1", "HSPB1", "BAG3", "HSPD1", "DNAJA1", "HSP90AB1", "HSPA8", "DNAJB4",
+               "DNAJA4")
+
+Idents(CD4Obj) <- CD4Obj$predicted.celltype
+pdf(file.path(getwd(), "HSMarkers.pdf"))
+DotPlot(CD4Obj, features = HSMarkers) +
+    scale_color_gradient(high = "#4B0082", low = "white") +
+   theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+dev.off()
+

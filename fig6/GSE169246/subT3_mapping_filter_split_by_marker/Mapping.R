@@ -36,32 +36,15 @@ opt = parse_args(opt_parser);
 refSeuratObj <- readRDS(opt$referenceData)
 querySeuratObj <- readRDS(opt$queryData)
 
+cellCycleGeneT1 <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/knowledge/public/database/general/cell-cycle-gene-list.txt")
+cellCycleGeneT2 <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/knowledge/public/database/general/regev_lab_cell_cycle_genes.txt")
 DefaultAssay(refSeuratObj) <- "RNA"
 DefaultAssay(querySeuratObj) <- "RNA"
-
-cellCycleGeneT1 <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/knowledge/public/database/general/cell-cy\
-cle-gene-list.txt")
-cellCycleGeneT2 <- read_tsv("/rsrch3/scratch/genomic_med/ychu2/projects/p1review/R3Q7/knowledge/public/database/general/regev_l\
-ab_cell_cycle_genes.txt")
-
-HSMarkers <- c("HSPA6", "HSPA1A", "HSPA1B", "DNAJB1", "HSPH1", "HSP90AA1", "HSPE1", "HSPB1", "BAG3", "HSPD1", "DNAJA1", "HSP90A\
-B1", "HSPA8", "DNAJB4", "DNAJA4")
-
-DEG_path <- file.path(dirname(opt$referenceData), "snn-single-markers.tsv")
-## DEG_path <- file.path(dirname(CD4_ReferenceDataPath), "snn-single-markers.tsv")
-DEGs <- read_tsv(DEG_path) %>%
-    arrange(cluster, desc(avg_logFC)) %>%
-    filter(avg_logFC > 0) %>%
-    group_by(cluster) %>%
-    top_n(100) %>%
-    pull(gene)
 
 refSeuratObj <- refSeuratObj %>%
     NormalizeData(verbose = T) %>%
     FindVariableFeatures(selection.method = "vst")
 hvgR = VariableFeatures(object = refSeuratObj)
-hvgR <- union(hvgR, HSMarkers)
-hvgR <- intersect(hvgR, DEGs)
 hvgR <- setdiff(hvgR, cellCycleGeneT1$marker)
 hvgR <- setdiff(hvgR, cellCycleGeneT2$marker)
 refSeuratObj <- refSeuratObj %>%
@@ -71,8 +54,7 @@ refSeuratObj <- refSeuratObj %>%
 querySeuratObj <- querySeuratObj %>%
 NormalizeData(verbose = T) %>%
 FindVariableFeatures(selection.method = "vst")
-hvgR <- union(hvgR, HSMarkers)
-hvgR <- intersect(hvgR, DEGs)
+hvgQ = VariableFeatures(object = querySeuratObj)
 hvgR <- setdiff(hvgR, cellCycleGeneT1$marker)
 hvgR <- setdiff(hvgR, cellCycleGeneT2$marker)
 querySeuratObj <- querySeuratObj %>%
@@ -171,25 +153,5 @@ png(file.path(opt$out, "query_mapped.png"))
 print(p2)
 dev.off()
 
-for(i in 1:10){
-    g <- ggplot(meta) +
-        geom_point(
-            aes(x = dim1,
-                y = dim2,
-                color = predicted.celltype),
-            size = 0.01 * i) +
-        scale_color_manual(values = umapColor) +
-        theme_void() +
-        theme(text = element_text(size = 8),
-              legend.position = "none",
-              axis.text.x = element_blank(),
-              axis.text.y = element_blank(),
-              axis.ticks = element_blank())
-    if(str_detect(opt$referenceData, "CD8")){
-        g  <- g  + scale_x_reverse()
-    }
-    png(file.path(opt$out, paste0("query2_mapped_", i, ".png")))
-    print(g)
-    dev.off()
-}
-## saveRDS(querySeuratObj, file.path(opt$out, paste0('querySeuratObj', "_", Sys.Date(), '.rds')))
+write_tsv(meta, file.path(opt$out, paste0('meta', "_", Sys.Date(), '.tsv')))
+
